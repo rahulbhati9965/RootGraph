@@ -1,0 +1,48 @@
+# Python Virtual Environments
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+*.so
+
+# Environment Variables & Secrets
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Databases & Vector Stores
+data/tracepilot.db
+data/tracepilot.db-journal
+data/tracepilot.db-wal
+data/tracepilot.db-shm
+data/chroma/
+*.sqlite
+*.sqlite3
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+
+# Logs & Runtime
+*.log
+logs/
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+.edge_profile/
+*.pdf

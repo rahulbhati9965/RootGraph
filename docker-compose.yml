@@ -1,0 +1,112 @@
+version: '3.8'
+
+services:
+  # 1. Authoritative Relational & Vector Persistence
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: tracepilot-postgres
+    environment:
+      POSTGRES_DB: tracepilot
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Service Topology Graph Database
+  neo4j:
+    image: neo4j:5.18-community
+    container_name: tracepilot-neo4j
+    environment:
+      NEO4J_AUTH: neo4j/password
+      NEO4J_PLUGINS: '["apoc"]'
+    ports:
+      - "7474:7474" # Browser UI
+      - "7687:7687" # Bolt protocol
+    volumes:
+      - neo4j_data:/data
+    healthcheck:
+      test: ["CMD", "neo4j", "status"]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  # 3. Asynchronous Streaming & Cache Layer
+  redis:
+    image: redis:7.2-alpine
+    container_name: tracepilot-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 4. FastAPI Application Server
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tracepilot-api
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - STORAGE_BACKEND=postgres
+      - DATABASE_URL=postgresql+asyncpg://postgres:password@postgres:5432/tracepilot
+      - GRAPH_BACKEND=neo4j
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=password
+      - STREAM_BACKEND=redis
+      - REDIS_URL=redis://redis:6379/0
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./app:/app/app
+      - ./data:/app/data
+
+  # 5. Background Streaming Worker (Redis Streams Consumer)
+  worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tracepilot-worker
+    command: python -m app.workers.event_consumer
+    environment:
+      - ENVIRONMENT=production
+      - STORAGE_BACKEND=postgres
+      - DATABASE_URL=postgresql+asyncpg://postgres:password@postgres:5432/tracepilot
+      - GRAPH_BACKEND=neo4j
+      - NEO4J_URI=bolt://neo4j:7687
+      - NEO4J_USER=neo4j
+      - NEO4J_PASSWORD=password
+      - STREAM_BACKEND=redis
+      - REDIS_URL=redis://redis:6379/0
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  neo4j_data:
+  redis_data:

@@ -1,0 +1,51 @@
+[
+  {
+    "id": "dep-001",
+    "service": "payment-service",
+    "version": "v2.4.1",
+    "deployed_at": "2024-11-14T15:45:00Z",
+    "deployed_by": "ci-cd-bot",
+    "git_commit": "a89f21c",
+    "commit_message": "Tuning bank gateway timeout from 2000ms to 900ms",
+    "status": "SUCCESS",
+    "config_changes": {
+      "BANK_GATEWAY_TIMEOUT_MS": 900,
+      "MAX_RETRY_COUNT": 2
+    }
+  },
+  {
+    "id": "dep-002",
+    "service": "checkout-service",
+    "version": "v3.1.0",
+    "deployed_at": "2024-11-12T10:00:00Z",
+    "deployed_by": "sarah.m",
+    "git_commit": "f3b190a",
+    "commit_message": "Feature: Add international currency selector",
+    "status": "SUCCESS",
+    "config_changes": {}
+  },
+  {
+    "id": "dep-003",
+    "service": "inventory-service",
+    "version": "v1.8.4",
+    "deployed_at": "2024-11-10T14:20:00Z",
+    "deployed_by": "alex.k",
+    "git_commit": "7c12de4",
+    "commit_message": "Fix stock reservation lock contention",
+    "status": "SUCCESS",
+    "config_changes": {}
+  },
+  {
+    "id": "dep-004",
+    "service": "api-gateway",
+    "version": "v4.0.2",
+    "deployed_at": "2024-11-08T09:15:00Z",
+    "deployed_by": "sre-deploy-bot",
+    "git_commit": "4e908b1",
+    "commit_message": "Update rate limiting thresholds for holiday traffic",
+    "status": "SUCCESS",
+    "config_changes": {
+      "RATE_LIMIT_RPS": 5000
+    }
+  }
+]

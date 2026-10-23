@@ -1,0 +1,183 @@
+{
+  "trace_id": "1-6653af2e-17c4f8b3e4a2c6d7e8f9a0b1",
+  "start_time": "2025-05-23T14:32:18.104Z",
+  "duration_ms": 2348,
+  "status": "ERROR",
+  "services_count": 12,
+  "spans_count": 48,
+  "errors_count": 7,
+  "correlation_chain": ["a1b2c3d4", "b2c3d4e5", "c3d4e5f6", "d4e5f607"],
+  "spans": [
+    {
+      "span_id": "span_root_001",
+      "parent_span_id": null,
+      "service_name": "api-gateway",
+      "operation_name": "HTTP GET /checkout",
+      "region": "us-east-1",
+      "start_offset_ms": 0,
+      "duration_ms": 320,
+      "status_code": 200,
+      "status": "OK",
+      "correlation_id": "a1b2c3d4",
+      "tags": {
+        "http.method": "GET",
+        "http.url": "/api/v1/checkout",
+        "component": "api-gateway"
+      }
+    },
+    {
+      "span_id": "span_auth_002",
+      "parent_span_id": "span_root_001",
+      "service_name": "auth-service",
+      "operation_name": "Validate Token",
+      "region": "us-east-1",
+      "start_offset_ms": 45,
+      "duration_ms": 165,
+      "status_code": 200,
+      "status": "OK",
+      "tags": {"rpc.system": "grpc", "auth.method": "jwt"}
+    },
+    {
+      "span_id": "span_user_003",
+      "parent_span_id": "span_root_001",
+      "service_name": "user-service",
+      "operation_name": "Get User Profile",
+      "region": "us-east-1",
+      "start_offset_ms": 120,
+      "duration_ms": 100,
+      "status_code": 200,
+      "status": "OK",
+      "tags": {"rpc.system": "grpc", "cache.hit": true}
+    },
+    {
+      "span_id": "span_front_004",
+      "parent_span_id": "span_root_001",
+      "service_name": "frontend-service",
+      "operation_name": "Render Checkout",
+      "region": "us-east-1",
+      "start_offset_ms": 200,
+      "duration_ms": 100,
+      "status_code": 200,
+      "status": "OK",
+      "tags": {"view": "checkout_page"}
+    },
+    {
+      "span_id": "y7g6f5e4d3c2b1a0",
+      "parent_span_id": "span_root_001",
+      "service_name": "checkout-service",
+      "operation_name": "Create Checkout",
+      "region": "us-east-1",
+      "start_offset_ms": 320,
+      "duration_ms": 1820,
+      "status_code": 504,
+      "status": "WARN",
+      "is_slow": true,
+      "correlation_id": "b2c3d4e5",
+      "tags": {
+        "http.method": "POST",
+        "order.items_count": 3,
+        "warning": "Latency exceeds p95 baseline (400ms)"
+      }
+    },
+    {
+      "span_id": "span_inv_006",
+      "parent_span_id": "y7g6f5e4d3c2b1a0",
+      "service_name": "inventory-service",
+      "operation_name": "Check Availability",
+      "region": "us-west-2",
+      "start_offset_ms": 350,
+      "duration_ms": 270,
+      "status_code": 200,
+      "status": "OK",
+      "tags": {"items.reserved": true}
+    },
+    {
+      "span_id": "span_price_007",
+      "parent_span_id": "y7g6f5e4d3c2b1a0",
+      "service_name": "pricing-service",
+      "operation_name": "Calculate Price",
+      "region": "us-west-2",
+      "start_offset_ms": 650,
+      "duration_ms": 220,
+      "status_code": 200,
+      "status": "OK",
+      "tags": {"currency": "USD", "discount.applied": false}
+    },
+    {
+      "span_id": "a1b2c3d4e5f67890",
+      "parent_span_id": "y7g6f5e4d3c2b1a0",
+      "service_name": "payment-service",
+      "operation_name": "Charge Payment",
+      "region": "eu-west-1",
+      "start_offset_ms": 870,
+      "duration_ms": 1230,
+      "status_code": 500,
+      "status": "ERROR",
+      "correlation_id": "c3d4e5f6",
+      "tags": {
+        "http.method": "POST",
+        "http.url": "/v1/charge",
+        "http.status_code": 500,
+        "component": "payment-service",
+        "region": "eu-west-1",
+        "error": "Payment gateway timeout"
+      }
+    },
+    {
+      "span_id": "span_fraud_009",
+      "parent_span_id": "a1b2c3d4e5f67890",
+      "service_name": "fraud-service",
+      "operation_name": "Fraud Check",
+      "region": "eu-west-1",
+      "start_offset_ms": 890,
+      "duration_ms": 160,
+      "status_code": 200,
+      "status": "OK",
+      "tags": {"risk.score": 0.04, "verdict": "ALLOW"}
+    },
+    {
+      "span_id": "span_bank_010",
+      "parent_span_id": "a1b2c3d4e5f67890",
+      "service_name": "bank-gateway",
+      "operation_name": "Process Charge",
+      "region": "eu-central-1",
+      "start_offset_ms": 1050,
+      "duration_ms": 900,
+      "status_code": 504,
+      "status": "ERROR",
+      "correlation_id": "d4e5f607",
+      "tags": {
+        "http.method": "POST",
+        "http.url": "https://api.centralbank.eu/v2/transactions",
+        "http.status_code": 504,
+        "error.type": "GatewayTimeoutException",
+        "error.message": "Upstream bank gateway timed out after 900ms",
+        "network.peer.address": "194.12.44.8"
+      }
+    },
+    {
+      "span_id": "span_notify_011",
+      "parent_span_id": "y7g6f5e4d3c2b1a0",
+      "service_name": "notification-service",
+      "operation_name": "Send Confirmation",
+      "region": "us-east-1",
+      "start_offset_ms": 2100,
+      "duration_ms": 100,
+      "status_code": 200,
+      "status": "OK",
+      "tags": {"channel": "email", "status": "QUEUED"}
+    },
+    {
+      "span_id": "span_analytics_012",
+      "parent_span_id": "y7g6f5e4d3c2b1a0",
+      "service_name": "analytics-service",
+      "operation_name": "Track Event",
+      "region": "us-east-1",
+      "start_offset_ms": 2250,
+      "duration_ms": 30,
+      "status_code": 200,
+      "status": "OK",
+      "tags": {"kafka.topic": "checkout.events"}
+    }
+  ]
+}

@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TraceLog · System Architecture Blueprints</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Orbitron:wght@700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-base: #060913;
+      --bg-surface: #0a1122;
+      --bg-card: #0d162d;
+      --border-subtle: #182848;
+      --border-glow: rgba(56, 189, 248, 0.3);
+      --primary-cyan: #38bdf8;
+      --primary-blue: #0284c7;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+      --accent-green: #10b981;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, sans-serif;
+      font-size: 14px;
+      line-height: 1.6;
+      padding: 0;
+      margin: 0;
+    }
+
+    /* Sci-Fi Top Header */
+    header {
+      background: linear-gradient(180deg, #0d1830 0%, #060a15 100%);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 16px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(12px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand-logo {
+      font-family: 'Orbitron', monospace;
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      color: #ffffff;
+      text-shadow: 0 0 15px rgba(56, 189, 248, 0.6);
+    }
+    .brand-logo span { color: var(--primary-cyan); }
+    .brand-tag {
+      background: rgba(56, 189, 248, 0.15);
+      border: 1px solid var(--primary-cyan);
+      color: var(--primary-cyan);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+    }
+    .btn-nav {
+      background: rgba(13, 22, 45, 0.8);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .btn-nav:hover {
+      border-color: var(--primary-cyan);
+      background: var(--bg-card);
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+      border-color: rgba(56, 189, 248, 0.5);
+      color: #fff;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1100px;
+      margin: 40px auto 100px auto;
+      padding: 0 24px;
+    }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 50px;
+    }
+    .hero h1 {
+      font-size: 32px;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 12px;
+      letter-spacing: -0.5px;
+    }
+    .hero p {
+      font-size: 16px;
+      color: var(--text-muted);
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    /* Architecture Cards */
+    .arch-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      margin-bottom: 48px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      transition: border-color 0.3s;
+    }
+    .arch-card:hover {
+      border-color: var(--border-glow);
+    }
+    .arch-header {
+      background: #091024;
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .arch-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .arch-num {
+      background: rgba(56, 189, 248, 0.2);
+      color: var(--primary-cyan);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 4px 10px;
+      border-radius: 4px;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+    }
+    .arch-header h2 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+    .arch-body {
+      padding: 24px;
+    }
+    .arch-desc {
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    /* ASCII / Unicode Blueprint Box */
+    .blueprint-wrapper {
+      position: relative;
+      background: #040711;
+      border: 1px solid #14223d;
+      border-radius: 8px;
+      padding: 24px;
+      overflow-x: auto;
+      margin-bottom: 20px;
+    }
+    .blueprint-pre {
+      font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.35;
+      color: #38bdf8;
+      text-shadow: 0 0 1px rgba(56, 189, 248, 0.5);
+      white-space: pre;
+    }
+
+    .copy-btn {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: rgba(13, 22, 45, 0.9);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .copy-btn:hover {
+      color: #fff;
+      border-color: var(--primary-cyan);
+      background: #0284c7;
+    }
+
+    /* Feature Highlights Table */
+    .spec-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+      font-size: 12px;
+    }
+    .spec-table th {
+      background: #070d1d;
+      color: var(--primary-cyan);
+      text-align: left;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border-subtle);
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .spec-table td {
+      padding: 10px 14px;
+      border-bottom: 1px solid #0e1830;
+      color: var(--text-muted);
+    }
+    .spec-table tr:hover td {
+      background: rgba(56, 189, 248, 0.03);
+      color: #f1f5f9;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #0d162d;
+      border: 1px solid var(--primary-cyan);
+      color: #ffffff;
+      padding: 12px 20px;
+      border-radius: 6px;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+      display: none;
+      z-index: 100;
+      font-weight: 600;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Navigation Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-logo">TRACE<span>LOG</span></div>
+      <div class="brand-tag">SYSTEM ARCHITECTURE BLUEPRINTS</div>
+    </div>
+    <div class="header-actions">
+      <a href="/cockpit" class="btn-nav btn-primary">🛰️ Open Live Incident Cockpit</a>
+      <button class="btn-nav" onclick="window.print()">🖨️ Print / Save as PDF</button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <div class="container">
+    <div class="hero">
+      <h1>Autonomous Distributed Systems Incident Intelligence</h1>
+      <p>Technical architecture blueprints detailing the end-to-end dataflow, LangGraph multi-agent cyclic loops, SHA-256 alert-storm deduplication, and Hybrid GraphRAG topological traversal.</p>
+    </div>
+
+    <!-- ARCHITECTURE 1 -->
+    <div class="arch-card" id="arch-1">
+      <div class="arch-header">
+        <div class="arch-title">
+          <span class="arch-num">ARCH 01</span>
+          <h2>End-to-End Distributed Platform Blueprint</h2>
+        </div>
+      </div>
+      <div class="arch-body">
+        <p class="arch-desc">Comprehensive macro architecture tracing telemetry from inbound Alertmanager webhooks and OpenTelemetry spans, through SHA-256 idempotency deduplication and the LangGraph multi-agent loop, down to MCP circuit breakers and the interactive SRE Cockpit.</p>
+        
+        <div class="blueprint-wrapper">
+          <button class="copy-btn" onclick="copyBlueprint('bp-1', this)">Copy Diagram</button>
+          <pre class="blueprint-pre" id="bp-1">┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                 TRACELOG SYSTEM ARCHITECTURE                                    │
+│                     Autonomous AI Distributed Systems Incident Intelligence                     │
+└─────────────────────────────────────────────────────────────────────────────────────────────────┘
+
+ [ INBOUND TELEMETRY & ALERTS ]
+   │  • Prometheus / Alertmanager Webhooks
+   │  • OpenTelemetry Spans (W3C traceparent headers)
+   │  • Microservice JSON Error Logs
+   ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ 1. INGESTION & IDEMPOTENCY LAYER (FastAPI + Redis Streams)                                      │
+│                                                                                                 │
+│   ┌───────────────────────────┐      Duplicate Alert Storms                                     │
+│   │  SHA-256 Event Fingerprint │ ─────────────────────────────────► [ 409 Deduplicated / Drop ] │
+│   └─────────────┬─────────────┘                                                                 │
+│                 │ Unique Alert / Incident                                                       │
+│                 ▼                                                                               │
+│   ┌─────────────────────────────────────────────────────────────┐                               │
+│   │ Redis Streams Ingestion Pipeline (Consumer Groups + DLQ)    │                               │
+│   └─────────────────────────────┬───────────────────────────────┘                               │
+│                                 │ Distributed Lease Lock                                        │
+│                                 ▼                                                               │
+│                     [ Background Engine Worker ]                                                │
+└─────────────────────────────────┼───────────────────────────────────────────────────────────────┘
+                                  │
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ 2. AUTONOMOUS MULTI-AGENT REASONING ENGINE (LangGraph StateGraph)                               │
+│                                                                                                 │
+│        [ CLASSIFY NODE ] ──► Assesses severity (P0-P3) & failure domain                         │
+│               │                                                                                 │
+│               ▼                                                                                 │
+│        [ TELEMETRY NODE ] ──► Analyzes RED metrics, p99 latency spikes & error ratios           │
+│               │                                                                                 │
+│               ▼                                                                                 │
+│        [ TOPOLOGY NODE ] ──► BFS graph traversal & upstream/downstream blast radius             │
+│               │                                                                                 │
+│               ▼                                                                                 │
+│      ┌─► [ HYPOTHESIZE NODE ] ──► Formulates causal hypotheses (Root Cause vs Victim)           │
+│      │        │                                                                                 │
+│      │        ▼                                                                                 │
+│      │   [ EVALUATOR NODE ] ──── Confidence >= 0.80 ? ─────┐                                    │
+│      │        │                                            │ (YES)                              │
+│      │        │ (NO: Contradicted)                         ▼                                    │
+│      └── [ PIVOT NODE ] ◄──────────── [ KNOWLEDGE NODE ] ◄─┘                                    │
+│          Backtrack to downstream        Hybrid GraphRAG + BM25 Subword Match                    │
+│                                                │                                                │
+│                                                ▼                                                │
+│                                         [ REPORT NODE ]                                         │
+│                                    Compiles SRE RCA Report                                      │
+└────────────────────────────────────────────────┼────────────────────────────────────────────────┘
+                                                 │
+                                                 ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ 3. MODEL CONTEXT PROTOCOL (MCP) TOOL SERVER                                                     │
+│                                                                                                 │
+│   ┌───────────────────────────┐  ┌───────────────────────────┐  ┌───────────────────────────┐   │
+│   │ query_metrics()           │  │ search_traces()           │  │ get_service_deps()        │   │
+│   ├───────────────────────────┤  ├───────────────────────────┤  ├───────────────────────────┤   │
+│   │ search_runbooks()         │  │ find_similar_incidents()  │  │ get_deployment_history()  │   │
+│   └───────────────────────────┘  └───────────────────────────┘  └───────────────────────────┘   │
+│                 │                                                             │                 │
+│                 ▼                                                             ▼                 │
+│   ┌───────────────────────────┐                                 ┌───────────────────────────┐   │
+│   │ 3-State Circuit Breakers  │                                 │ Bounded Call Budgets      │   │
+│   │ [ CLOSED / OPEN / HALF ]  │                                 │ (Max 15 tool calls/run)   │   │
+│   └───────────────────────────┘                                 └───────────────────────────┘   │
+└────────────────────────────────────────────────┼────────────────────────────────────────────────┘
+                                                 │
+                                                 ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────────────┐
+│ 4. VISUAL SRE INCIDENT COCKPIT & ONE-CLICK REMEDIATION                                          │
+│                                                                                                 │
+│  • 48-Span Trace Waterfall with Critical-Path Bottleneck Highlighting                           │
+│  • Interactive SVG Microservices Topology Graph                                                 │
+│  • Live Agent Reasoning Timeline & Confidence Radial Gauges                                     │
+│  • 1-Click Runbook Remediation: [ FAILOVER_GATEWAY ] [ ISOLATE_NODE ] [ SCALE_PODS ]            │
+└─────────────────────────────────────────────────────────────────────────────────────────────────┘</pre>
+        </div>
+
+        <table class="spec-table">
+          <thead>
+            <tr><th>Component</th><th>Technology</th><th>Engineering Role</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>Ingestion Layer</strong></td><td>FastAPI + Pydantic v2</td><td>Decodes W3C traceparents, computes SHA-256 idempotency fingerprints.</td></tr>
+            <tr><td><strong>State Machine</strong></td><td>LangGraph</td><td>Cyclic directed graph orchestrating 8 specialized SRE diagnostic nodes.</td></tr>
+            <tr><td><strong>Tool Protocol</strong></td><td>MCP (Model Context Protocol)</td><td>8 typed diagnostic tools with 3-state circuit breakers & call budgets.</td></tr>
+            <tr><td><strong>Interactive HUD</strong></td><td>HTML5 / Vanilla CSS / JS</td><td>High-frequency 3-column SRE cockpit with 48-span trace waterfall.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ARCHITECTURE 2 -->
+    <div class="arch-card" id="arch-2">
+      <div class="arch-header">
+        <div class="arch-title">
+          <span class="arch-num">ARCH 02</span>
+          <h2>Multi-Agent Cyclic State Machine (LangGraph)</h2>
+        </div>
+      </div>
+      <div class="arch-body">
+        <p class="arch-desc">Standard linear chains fail because LLMs frequently mistake symptoms (e.g. checkout-service 504) for the actual root cause. TraceLog uses an 8-node cyclic Evaluator-Optimizer loop that autonomously pivots when hypotheses are contradicted.</p>
+        
+        <div class="blueprint-wrapper">
+          <button class="copy-btn" onclick="copyBlueprint('bp-2', this)">Copy Diagram</button>
+          <pre class="blueprint-pre" id="bp-2">               ┌───────────────────────────────┐
+               │    Inbound Incident Context   │
+               │   (Alert, Service, Symptoms)  │
+               └───────────────┬───────────────┘
+                               │
+                               ▼
+               ┌───────────────────────────────┐
+               │         CLASSIFY NODE         │
+               │   • Maps Alert to P0/P1/P2/P3 │
+               │   • Extracts Failure Domain   │
+               └───────────────┬───────────────┘
+                               │
+                               ▼
+               ┌───────────────────────────────┐
+               │        TELEMETRY NODE         │
+               │   • Calculates RED Metrics    │
+               │   • Extracts Critical Path    │
+               │   • Analyzes Error Rates      │
+               └───────────────┬───────────────┘
+                               │
+                               ▼
+               ┌───────────────────────────────┐
+               │         TOPOLOGY NODE         │
+               │   • Traverses Dependency Tree │
+               │   • Computes BFS Blast Radius │
+               │   • Applies 1.5x Boost to Path│
+               └───────────────┬───────────────┘
+                               │
+                               ▼
+               ┌───────────────────────────────┐
+               │       HYPOTHESIZE NODE        │
+               │   • Generates Ranked Causes   │
+               │   • Formulates Suspect Nodes  │
+               └───────────────┬───────────────┘
+                               │
+                               ▼
+               ┌───────────────────────────────┐
+               │        EVALUATOR NODE         │
+               │   • Cross-examines Traces     │
+               │   • Tests Evidence Consistency│
+               │   • Calculates Confidence     │
+               └───────┬───────────────┬───────┘
+                       │               │
+      Confidence < 0.8 │               │ Confidence >= 0.80
+      (Contradicted)   │               │ (Validated)
+                       ▼               ▼
+        ┌──────────────────────┐  ┌──────────────────────┐
+        │      PIVOT NODE      │  │    KNOWLEDGE NODE    │
+        │ • Traverses Downstream│  │ • GraphRAG Runbooks  │
+        │ • Reprioritizes Nodes │  │ • Matches Postmortems│
+        └──────────────┬───────┘  └──────────┬───────────┘
+                       │                     │
+                       └───────────────┐     ▼
+                                       │  ┌──────────────────────┐
+                                       │  │     REPORT NODE      │
+                                       └─►│ • Root Cause Verdict │
+                                          │ • SRE Action Plan    │
+                                          │ • 1-Click Remediation│
+                                          └──────────────────────┘</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- ARCHITECTURE 3 -->
+    <div class="arch-card" id="arch-3">
+      <div class="arch-header">
+        <div class="arch-title">
+          <span class="arch-num">ARCH 03</span>
+          <h2>High-Frequency Ingestion & Alert-Storm Deduplication</h2>
+        </div>
+      </div>
+      <div class="arch-body">
+        <p class="arch-desc">During major outages, thousands of alerts fire simultaneously. TraceLog computes SHA-256 fingerprints across 60-second sliding time windows, dropping duplicates in O(1) time and acquiring distributed mutex leases.</p>
+        
+        <div class="blueprint-wrapper">
+          <button class="copy-btn" onclick="copyBlueprint('bp-3', this)">Copy Diagram</button>
+          <pre class="blueprint-pre" id="bp-3">               [ 5,000 Inbound Alertmanager Webhooks ]
+                                  │
+                                  ▼
+               ┌──────────────────────────────────────┐
+               │   FASTAPI INGESTION MIDDLEWARE       │
+               │   (OpenTelemetry Context Decoded)    │
+               └──────────────────┬───────────────────┘
+                                  │
+                                  ▼
+               ┌──────────────────────────────────────┐
+               │    SHA-256 IDEMPOTENCY ENGINE        │
+               │                                      │
+               │ Fingerprint = SHA-256(               │
+               │   service_name +                     │
+               │   alert_type +                       │
+               │   time_window_bucket (60s)           │
+               │ )                                    │
+               └──────────────────┬───────────────────┘
+                                  │
+                  ┌───────────────┴───────────────┐
+                  ▼                               ▼
+       [ Fingerprint in Cache? ]       [ New Unique Fingerprint ]
+                  │                               │
+                  ▼                               ▼
+         (DUPLICATE DETECTED)            [ Acquire Atomic Lease Lock ]
+         Return Cached 200 OK            • Key: "lease:inc:{fingerprint}"
+         (Zero duplicate compute)        • TTL: 120 seconds
+                                                  │
+                                                  ▼
+                                     [ Redis Streams Event Bus ]
+                                     • Stream: "tracepilot:events"
+                                     • Consumer Group: "incident-investigators"
+                                                  │
+                                                  ▼
+                                     [ Redis Consumer Group ]
+                                     • Group: "incident-investigators"
+                                     • Consumer: "worker-pod-01"
+                                                  │
+                                                  ▼
+                                     ┌─────────────────────────┐
+                                     │   At-Least-Once Worker  │
+                                     │   • XREADGROUP          │
+                                     │   • LangGraph Execution │
+                                     │   • XACK on Success     │
+                                     │   • DLQ on 3 Retries    │
+                                     └─────────────────────────┘</pre>
+        </div>
+      </div>
+    </div>
+
+    <!-- ARCHITECTURE 4 -->
+    <div class="arch-card" id="arch-4">
+      <div class="arch-header">
+        <div class="arch-title">
+          <span class="arch-num">ARCH 04</span>
+          <h2>Hybrid GraphRAG & Topological Traversal</h2>
+        </div>
+      </div>
+      <div class="arch-body">
+        <p class="arch-desc">Vector embeddings alone fail in microservices because error logs across services share identical phrases. TraceLog multiplies semantic similarity by an exponential topological factor (1.5^depth), boosting true downstream root causes over upstream victim callers.</p>
+        
+        <div class="blueprint-wrapper">
+          <button class="copy-btn" onclick="copyBlueprint('bp-4', this)">Copy Diagram</button>
+          <pre class="blueprint-pre" id="bp-4"> [ MICROSERVICE TOPOLOGY GRAPH ]
+
+    [ api-gateway ] ──(HTTP)──► [ checkout-service ] ──(RPC)──► [ payment-gateway ] ──(HTTPS)──► [ Bank API ]
+                                       │                                                           (504 Timeout)
+                                     (gRPC)
+                                       ▼
+                              [ inventory-service ]
+
+                 ┌──────────────────────────────────────────────┐
+                 │        HYBRID GRAPHRAG RANKING ENGINE        │
+                 └──────────────────────┬───────────────────────┘
+                                        │
+         ┌──────────────────────────────┴──────────────────────────────┐
+         ▼                                                             ▼
+  1. Topological Traversal (NetworkX/Neo4j)               2. Semantic Subword Matching
+  • Directed BFS Distance Calculation                     • BM25 + Subword Embeddings
+  • Upstream Caller Identification                        • Query: "504 gateway timeout bank api"
+  • Terminal Callee Isolation                             • Matched: RUNBOOK-PAY-04 (0.88 score)
+  • 1.5x Topological Boost                                • Matched: RUNBOOK-REDIS-02 (0.42 score)
+         │                                                             │
+         └──────────────────────────────┬──────────────────────────────┘
+                                        │
+                                        ▼
+                        [ Composite Confidence Scoring ]
+                                        
+                Score(S) = Similarity(Query, Doc) x (1.5 ^ Topo_Depth(S))
+                
+               ┌────────────────────────────────────────────────────────┐
+               │ Result:                                                │
+               │ • payment-gateway: Final Score = 0.92 (ROOT CAUSE)     │
+               │ • checkout-service: Final Score = 0.31 (VICTIM SYMPTOM)│
+               └────────────────────────────────────────────────────────┘</pre>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div id="toast" class="toast">✓ Diagram copied to clipboard!</div>
+
+  <script>
+    function copyBlueprint(id, btn) {
+      const text = document.getElementById(id).innerText;
+      navigator.clipboard.writeText(text).then(() => {
+        const toast = document.getElementById('toast');
+        toast.style.display = 'block';
+        setTimeout(() => { toast.style.display = 'none'; }, 2500);
+      });
+    }
+  </script>
+</body>
+</html>

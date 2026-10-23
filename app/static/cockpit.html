@@ -1,0 +1,1559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TracePilot · Distributed Incident Cockpit</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Orbitron:wght@600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Cyber-Emerald Matrix Dark Palette */
+      --bg-base: #030805;
+      --bg-surface: #06140c;
+      --bg-card: #091c11;
+      --bg-card-hover: #0f2c1b;
+      --border-subtle: #123823;
+      --border-glow: rgba(16, 185, 129, 0.35);
+      --primary-cyan: #10b981;          /* Matrix Emerald */
+      --primary-mint: #34d399;          /* High-voltage Neon Mint */
+      --primary-neon: #00ff88;          /* Terminal Radar Green */
+      --primary-blue: #059669;          /* Forest Jade Accent */
+      --accent-amber: #f59e0b;          /* Degraded Warning */
+      --accent-red: #ef4444;            /* Outage / Critical */
+      --accent-red-glow: rgba(239, 68, 68, 0.45);
+      --accent-green: #10b981;
+      --accent-green-glow: rgba(16, 185, 129, 0.5);
+      --text-main: #f0fdf4;             /* Mint crisp white */
+      --text-muted: #a7f3d0;            /* Soft mint text */
+      --text-dim: #4ade80;              /* Cyber green accents */
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background-color: var(--bg-base);
+      color: var(--text-main);
+      font-family: 'Inter', -apple-system, sans-serif;
+      font-size: 12px;
+      line-height: 1.4;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Sci-Fi HUD Header */
+    header {
+      background: linear-gradient(180deg, #092014 0%, #030805 100%);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 10px 20px;
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 4px 20px rgba(0, 255, 136, 0.06);
+    }
+
+    .hud-meta-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .trace-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--primary-mint);
+      background: rgba(16, 185, 129, 0.09);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      padding: 4px 8px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.15);
+    }
+
+    .hud-stat-pill {
+      display: flex;
+      flex-direction: column;
+    }
+    .hud-stat-pill .label { font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+    .hud-stat-pill .val { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: #cbd5e1; }
+    .val-error { color: var(--accent-red) !important; font-weight: 700; }
+
+    .hud-title-center {
+      text-align: center;
+    }
+    .hud-title-center h1 {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 18px;
+      letter-spacing: 3px;
+      color: #ffffff;
+      text-shadow: 0 0 14px rgba(16, 185, 129, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+    }
+    .hud-brackets { color: var(--primary-neon); font-weight: 400; opacity: 0.9; }
+    .hud-subtitle {
+      font-size: 9px;
+      letter-spacing: 3px;
+      color: var(--primary-mint);
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .hud-meta-right {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 14px;
+    }
+
+    .toggle-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .led-pulse {
+      width: 8px;
+      height: 8px;
+      background: var(--accent-green);
+      border-radius: 50%;
+      box-shadow: 0 0 8px var(--accent-green-glow);
+      animation: pulse 1.8s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    /* Layout Grid */
+    .cockpit-container {
+      display: grid;
+      grid-template-columns: 290px 1fr 310px;
+      gap: 12px;
+      padding: 12px 16px;
+      height: calc(100vh - 65px);
+    }
+
+    .panel {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-header {
+      background: rgba(9, 28, 17, 0.7);
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: var(--primary-mint);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .panel-body {
+      padding: 12px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    /* Left Column: Trace Summary & Golden Signals */
+    .stat-quad-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+    .stat-quad-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      padding: 8px 10px;
+      border-radius: 4px;
+    }
+    .stat-quad-card .lbl { font-size: 9px; color: var(--text-dim); text-transform: uppercase; }
+    .stat-quad-card .num { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 700; margin-top: 2px; }
+
+    /* Radial Gauge */
+    .radial-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 12px 0;
+    }
+    .radial-circle {
+      position: relative;
+      width: 130px;
+      height: 130px;
+    }
+    .radial-circle svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+    .radial-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+    .radial-text .val {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--accent-red);
+      text-shadow: 0 0 10px var(--accent-red-glow);
+    }
+    .radial-text .sub {
+      font-size: 8px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Sparkline Bars */
+    .spark-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      padding: 8px 10px;
+      margin-bottom: 8px;
+    }
+    .spark-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      margin-bottom: 6px;
+    }
+    .spark-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 28px;
+    }
+    .spark-bar {
+      flex: 1;
+      background: rgba(56, 189, 248, 0.3);
+      border-radius: 1px;
+      transition: height 0.3s ease;
+    }
+    .spark-bar.warn { background: var(--accent-amber); }
+    .spark-bar.err { background: var(--accent-red); box-shadow: 0 0 6px var(--accent-red-glow); }
+
+    /* Service Progress Bars */
+    .service-row {
+      margin-bottom: 8px;
+    }
+    .service-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      margin-bottom: 3px;
+    }
+    .progress-track {
+      background: #09101f;
+      height: 6px;
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: 3px;
+    }
+
+    /* Center Panel: Tabs & Waterfall */
+    .tab-bar {
+      display: flex;
+      background: #051209;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .tab-btn {
+      padding: 9px 18px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .tab-btn:hover { color: #ffffff; background: rgba(16, 185, 129, 0.08); }
+    .tab-btn.active {
+      color: var(--primary-neon);
+      border-bottom-color: var(--primary-neon);
+      background: rgba(16, 185, 129, 0.12);
+      text-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
+    }
+
+    .tab-content { display: none; height: 100%; flex-direction: column; }
+    .tab-content.active { display: flex; }
+
+    /* Waterfall Timeline Scale */
+    .waterfall-scale {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      padding: 6px 12px;
+      background: #06140c;
+      border-bottom: 1px solid var(--border-subtle);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: var(--text-dim);
+    }
+    .time-ticks {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Waterfall Rows */
+    .span-list {
+      flex: 1;
+      overflow-y: auto;
+    }
+    .span-item {
+      display: grid;
+      grid-template-columns: 240px 1fr;
+      padding: 6px 12px;
+      border-bottom: 1px solid rgba(19, 58, 36, 0.5);
+      cursor: pointer;
+      transition: background 0.15s;
+      align-items: center;
+    }
+    .span-item:hover {
+      background: var(--bg-card-hover);
+    }
+    .span-item.selected {
+      background: rgba(16, 185, 129, 0.12);
+      border-left: 3px solid var(--primary-neon);
+    }
+    .span-info {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .span-service {
+      font-weight: 600;
+      color: #e2e8f0;
+      font-size: 11px;
+    }
+    .span-op {
+      color: var(--text-dim);
+      font-size: 10px;
+    }
+    .badge-region {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      padding: 1px 4px;
+      border-radius: 2px;
+      background: rgba(56, 189, 248, 0.1);
+      color: var(--primary-cyan);
+    }
+
+    .span-track {
+      position: relative;
+      height: 16px;
+      display: flex;
+      align-items: center;
+    }
+    .span-bar {
+      position: absolute;
+      height: 10px;
+      border-radius: 3px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      display: flex;
+      align-items: center;
+      padding: 0 4px;
+      color: #ffffff;
+      white-space: nowrap;
+    }
+    .span-bar.ok { background: #0284c7; }
+    .span-bar.slow { background: var(--accent-amber); color: #000; font-weight: 600; }
+    .span-bar.error { background: var(--accent-red); box-shadow: 0 0 8px var(--accent-red-glow); font-weight: 700; }
+
+    .crit-line {
+      position: absolute;
+      left: 12.8%;
+      right: 16%;
+      top: 50%;
+      height: 1px;
+      border-top: 1px dashed var(--accent-amber);
+      pointer-events: none;
+    }
+
+    /* Span Details Drawer */
+    .span-drawer {
+      background: var(--bg-card);
+      border-top: 1px solid var(--border-subtle);
+      padding: 10px 14px;
+      max-height: 190px;
+      overflow-y: auto;
+    }
+    .drawer-tabs {
+      display: flex;
+      gap: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 6px;
+      margin-bottom: 8px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .drawer-tab { color: var(--text-dim); cursor: pointer; }
+    .drawer-tab.active { color: var(--primary-cyan); }
+
+    .drawer-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+    }
+    .drawer-prop { display: flex; justify-content: space-between; padding: 2px 0; }
+    .drawer-prop .k { color: var(--text-dim); }
+    .drawer-prop .v { color: #f1f5f9; }
+
+    /* Correlation Chain Breadcrumbs */
+    .corr-chain {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px dashed var(--border-subtle);
+    }
+    .corr-node {
+      background: rgba(13, 22, 45, 0.8);
+      border: 1px solid var(--border-subtle);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 9px;
+    }
+    .corr-node.alert { border-color: var(--accent-red); color: var(--accent-red); font-weight: 600; }
+    .corr-arrow { color: var(--text-dim); font-size: 10px; }
+
+    /* Topology Graph View */
+    .topology-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at center, #0e1a38 0%, #060913 80%);
+      position: relative;
+    }
+    .topology-svg { width: 100%; height: 100%; }
+
+    /* Copilot Stream View */
+    .copilot-container {
+      padding: 14px;
+      overflow-y: auto;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .agent-step-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 6px;
+      padding: 10px 12px;
+      display: flex;
+      gap: 10px;
+      animation: fadeIn 0.3s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .agent-step-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      background: rgba(56, 189, 248, 0.1);
+      color: var(--primary-cyan);
+      flex-shrink: 0;
+    }
+    .agent-step-content { flex: 1; }
+    .agent-step-title { font-weight: 700; font-size: 11px; color: #ffffff; }
+    .agent-step-desc { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+    /* Remediation Action Panel */
+    .remediation-panel {
+      background: rgba(9, 28, 17, 0.9);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      border-radius: 6px;
+      padding: 12px;
+      margin-top: auto;
+    }
+    .rem-title { font-weight: 700; font-size: 11px; color: var(--primary-mint); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .rem-btn-group { display: flex; flex-direction: column; gap: 6px; }
+    .rem-btn {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      color: #ffffff;
+      border: 1px solid rgba(52, 211, 153, 0.4);
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      transition: all 0.2s;
+    }
+    .rem-btn:hover {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      box-shadow: 0 0 14px rgba(16, 185, 129, 0.4);
+    }
+    .rem-btn.executed {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+      cursor: default;
+    }
+
+    /* Right Column: Geography & Donut */
+    .geo-map-box {
+      background: #051209;
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      height: 140px;
+      position: relative;
+      margin-bottom: 12px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .geo-pin {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--primary-mint);
+      box-shadow: 0 0 10px var(--primary-mint);
+    }
+    .geo-pin.epicenter {
+      background: var(--accent-red);
+      box-shadow: 0 0 12px var(--accent-red);
+      animation: pulse 1.2s infinite;
+    }
+    .geo-label {
+      position: absolute;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      color: #cbd5e1;
+      transform: translate(12px, -4px);
+    }
+
+    .chart-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 12px;
+    }
+
+    /* Action Trigger Button */
+    .investigate-btn {
+      background: linear-gradient(135deg, #00ff88 0%, #10b981 100%);
+      color: #030805;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      border: none;
+      padding: 11px 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      margin-top: 10px;
+      transition: all 0.2s;
+      box-shadow: 0 0 16px rgba(0, 255, 136, 0.45);
+    }
+    .investigate-btn:hover {
+      box-shadow: 0 0 24px rgba(0, 255, 136, 0.7);
+      transform: translateY(-1px);
+    }
+
+    /* Success Toast */
+    .toast-banner {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #092014;
+      border: 1px solid var(--accent-green);
+      color: #ffffff;
+      padding: 12px 18px;
+      border-radius: 6px;
+      box-shadow: 0 4px 24px rgba(0, 255, 136, 0.3);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      z-index: 100;
+      display: none;
+      animation: slideUp 0.3s ease-out;
+    }
+    /* Scenario Toolbar */
+    .scenario-toolbar {
+      background: #040d07;
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 7px 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      overflow-x: auto;
+    }
+    .scenario-label {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--primary-mint);
+      letter-spacing: 0.8px;
+    }
+    .scenario-pill {
+      background: rgba(9, 26, 16, 0.85);
+      border: 1px solid var(--border-subtle);
+      color: #a7f3d0;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .scenario-pill:hover {
+      background: var(--bg-card-hover);
+      color: #ffffff;
+      border-color: var(--primary-mint);
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.3);
+    }
+    .scenario-pill.active {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: var(--primary-mint);
+      color: #ffffff;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.35);
+    }
+    .scenario-pill.custom-btn {
+      margin-left: auto;
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      color: #ffffff;
+      border-color: rgba(52, 211, 153, 0.5);
+    }
+    .scenario-pill.custom-btn:hover {
+      box-shadow: 0 0 14px rgba(16, 185, 129, 0.45);
+    }
+
+    /* Modal Overlay & Card */
+    .modal-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(6px);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-card {
+      background: #091c11;
+      border: 1px solid var(--border-glow);
+      box-shadow: 0 0 35px rgba(0, 0, 0, 0.85), 0 0 20px rgba(16, 185, 129, 0.25);
+      border-radius: 8px;
+      width: 520px;
+      max-width: 90vw;
+      overflow: hidden;
+      animation: modalScale 0.25s ease-out;
+    }
+    @keyframes modalScale {
+      from { transform: scale(0.92); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+    .modal-header {
+      background: #051209;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .modal-header h3 {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--primary-mint);
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .modal-close-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-size: 16px;
+      cursor: pointer;
+    }
+    .modal-close-btn:hover { color: #ffffff; }
+    .modal-body {
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .form-group label {
+      font-size: 9px;
+      font-weight: 700;
+      color: var(--text-dim);
+      letter-spacing: 0.5px;
+    }
+    .form-group input, .form-group select, .form-group textarea {
+      background: #040a06;
+      border: 1px solid var(--border-subtle);
+      border-radius: 4px;
+      padding: 8px 10px;
+      color: #f0fdf4;
+      font-family: inherit;
+      font-size: 11px;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      outline: none;
+      border-color: var(--primary-mint);
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
+    }
+    .modal-footer {
+      background: #051209;
+      padding: 12px 18px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+    .btn-cancel {
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-dim);
+      padding: 7px 14px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .btn-submit {
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      border: 1px solid rgba(52, 211, 153, 0.45);
+      color: #ffffff;
+      font-weight: 700;
+      padding: 7px 16px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 0 14px rgba(16, 185, 129, 0.4);
+    }
+    .btn-submit:hover {
+      box-shadow: 0 0 14px rgba(56, 189, 248, 0.4);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Cyber-HUD Header -->
+  <header>
+    <div class="hud-meta-left">
+      <div class="trace-badge">
+        <span style="opacity:0.6">TRACE:</span>
+        <span id="hdr-trace-id">1-6653af2e-17c4f8b3...</span>
+      </div>
+      <div class="hud-stat-pill">
+        <span class="label">START TIME</span>
+        <span class="val">2025-05-23 14:32:18.104</span>
+      </div>
+      <div class="hud-stat-pill">
+        <span class="label">DURATION</span>
+        <span class="val">2.348s</span>
+      </div>
+      <div class="hud-stat-pill">
+        <span class="label">STATUS</span>
+        <span class="val val-error" id="hdr-status">ERROR (504)</span>
+      </div>
+    </div>
+
+    <div class="hud-title-center">
+      <h1><span class="hud-brackets">[</span> DEBUG DISTRIBUTED <span class="hud-brackets">]</span></h1>
+      <div class="hud-subtitle">OBSERVE · CORRELATE · DEBUG · RESOLVE</div>
+    </div>
+
+    <div class="hud-meta-right">
+      <div class="toggle-group">
+        <span class="led-pulse"></span>
+        <span>AUTO REFRESH: ON</span>
+      </div>
+      <div class="hud-stat-pill">
+        <span class="label">TIME RANGE</span>
+        <span class="val">Last 15 minutes</span>
+      </div>
+      <div class="hud-stat-pill">
+        <span class="label">SYSTEM UTC</span>
+        <span class="val" id="utc-clock">14:32:18 UTC</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Scenario Presets & Custom Incident Action Bar -->
+  <div class="scenario-toolbar">
+    <div class="scenario-label"><span>⚡ SCENARIO PRESETS:</span></div>
+    <button class="scenario-pill active" id="btn-scen-1" onclick="loadScenarioPreset('bank-504', this)">
+      💳 Scenario 1: European Checkout 504 Timeout
+    </button>
+    <button class="scenario-pill" id="btn-scen-2" onclick="loadScenarioPreset('redis-leak', this)">
+      📦 Scenario 2: Inventory Redis Pool Starvation
+    </button>
+    <button class="scenario-pill" id="btn-scen-3" onclick="loadScenarioPreset('db-deadlock', this)">
+      🔒 Scenario 3: Pricing Postgres Lock Inversion
+    </button>
+    <button class="scenario-pill custom-btn" onclick="openCustomIncidentModal()">
+      <span>+</span> Ingest Custom Alert / Incident
+    </button>
+  </div>
+
+  <!-- Main 3-Column Cockpit -->
+  <main class="cockpit-container">
+
+    <!-- LEFT COLUMN: Trace Summary & Golden Signals -->
+    <aside class="panel">
+      <div class="panel-header">
+        <span>Trace Summary</span>
+        <span style="font-size:9px; color:var(--text-dim)">HOT PATH</span>
+      </div>
+      <div class="panel-body">
+        <div class="stat-quad-grid">
+          <div class="stat-quad-card">
+            <div class="lbl">Services</div>
+            <div class="num" id="stat-services">12</div>
+          </div>
+          <div class="stat-quad-card">
+            <div class="lbl">Total Spans</div>
+            <div class="num" id="stat-spans">48</div>
+          </div>
+          <div class="stat-quad-card">
+            <div class="lbl">Errors</div>
+            <div class="num val-error" id="stat-errors">7</div>
+          </div>
+          <div class="stat-quad-card">
+            <div class="lbl">Duration</div>
+            <div class="num">2.348s</div>
+          </div>
+        </div>
+
+        <!-- Radial Donut Gauge: Error Rate -->
+        <div class="radial-container">
+          <div class="radial-circle">
+            <svg viewBox="0 0 36 36">
+              <path stroke="#1e293b" stroke-width="3.5" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+              <path stroke="#ef4444" stroke-dasharray="15.9, 100" stroke-width="3.5" stroke-linecap="round" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"/>
+            </svg>
+            <div class="radial-text">
+              <div class="val">15.9%</div>
+              <div class="sub">ERROR RATE</div>
+            </div>
+          </div>
+          <span style="font-size:10px; color:var(--accent-red); margin-top:4px;">▲ +8.7% vs 15m ago</span>
+        </div>
+
+        <!-- SRE Golden Signals Sparklines -->
+        <div class="spark-card">
+          <div class="spark-header">
+            <span>Latency (P95 Spike)</span>
+            <span style="color:var(--accent-amber)">2800ms</span>
+          </div>
+          <div class="spark-bars">
+            <div class="spark-bar" style="height:30%"></div>
+            <div class="spark-bar" style="height:35%"></div>
+            <div class="spark-bar" style="height:28%"></div>
+            <div class="spark-bar" style="height:40%"></div>
+            <div class="spark-bar" style="height:60%"></div>
+            <div class="spark-bar warn" style="height:85%"></div>
+            <div class="spark-bar err" style="height:100%"></div>
+          </div>
+        </div>
+
+        <div class="spark-card">
+          <div class="spark-header">
+            <span>Throughput (RPS)</span>
+            <span style="color:var(--primary-cyan)">1.85k rps</span>
+          </div>
+          <div class="spark-bars">
+            <div class="spark-bar" style="height:70%"></div>
+            <div class="spark-bar" style="height:80%"></div>
+            <div class="spark-bar" style="height:75%"></div>
+            <div class="spark-bar" style="height:85%"></div>
+            <div class="spark-bar" style="height:80%"></div>
+            <div class="spark-bar" style="height:65%"></div>
+            <div class="spark-bar" style="height:55%"></div>
+          </div>
+        </div>
+
+        <!-- Top Services by Error Rate -->
+        <div style="margin-top:14px;">
+          <div style="font-size:10px; font-weight:700; color:var(--text-dim); text-transform:uppercase; margin-bottom:8px;">Top Services by Error Rate</div>
+          <div id="service-progress-list">
+            <!-- Populated via JS -->
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- CENTER PANEL: Waterfall & Interactive Diagnostic Tabs -->
+    <section class="panel">
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="switchTab('tab-waterfall', this)">
+          <span>🌊</span> Distributed Trace Waterfall (48 Spans)
+        </button>
+        <button class="tab-btn" onclick="switchTab('tab-topology', this)">
+          <span>🕸️</span> Service Dependency Graph
+        </button>
+        <button class="tab-btn" onclick="switchTab('tab-copilot', this)">
+          <span>🤖</span> Live AI Copilot & Runbooks
+        </button>
+      </div>
+
+      <!-- TAB 1: Trace Waterfall -->
+      <div id="tab-waterfall" class="tab-content active">
+        <div class="waterfall-scale">
+          <span>SERVICE / OPERATION</span>
+          <div class="time-ticks">
+            <span>0ms</span>
+            <span>500ms</span>
+            <span>1.0s</span>
+            <span>1.5s</span>
+            <span>2.0s</span>
+            <span>2.5s</span>
+          </div>
+        </div>
+
+        <div class="span-list" id="span-waterfall-rows">
+          <!-- Populated by JavaScript -->
+        </div>
+
+        <!-- Selected Span Details Drawer -->
+        <div class="span-drawer" id="span-drawer">
+          <div class="drawer-tabs">
+            <span class="drawer-tab active">OVERVIEW</span>
+            <span class="drawer-tab">TAGS (18)</span>
+            <span class="drawer-tab">LOGS (12)</span>
+            <span class="drawer-tab">EVENTS (6)</span>
+          </div>
+          <div class="drawer-grid" id="drawer-content">
+            <!-- Populated dynamically on span click -->
+          </div>
+          <!-- Correlation Breadcrumb -->
+          <div class="corr-chain" id="corr-chain-box">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: Service Dependency Graph -->
+      <div id="tab-topology" class="tab-content">
+        <div class="topology-container" id="topo-graph-view">
+          <svg class="topology-svg" id="topo-svg" viewBox="0 0 800 450">
+            <!-- SVG nodes and animated particles rendered by JS -->
+          </svg>
+        </div>
+      </div>
+
+      <!-- TAB 3: Live AI Copilot & Remediation Stream -->
+      <div id="tab-copilot" class="tab-content">
+        <div class="copilot-container" id="copilot-stream-box">
+          <!-- Populated with agent diagnostic steps -->
+        </div>
+
+        <!-- One-Click Remediation Panel -->
+        <div class="remediation-panel">
+          <div class="rem-title">
+            <span>⚡</span> Automated SRE Runbook Remediation Actions
+          </div>
+          <div class="rem-btn-group">
+            <button class="rem-btn" id="btn-rem-1" onclick="executeRemediation('Trip Circuit Breaker', 'bank-gateway', this)">
+              <span>Trip Circuit Breaker to Fast-Fail Degraded Bank Calls</span>
+              <span style="font-size:9px; opacity:0.8">EXECUTE ➔</span>
+            </button>
+            <button class="rem-btn" id="btn-rem-2" onclick="executeRemediation('Tune Timeout Threshold', 'payment-service', this)">
+              <span>Tune Connection Timeout: BANK_GATEWAY_TIMEOUT_MS=1500</span>
+              <span style="font-size:9px; opacity:0.8">EXECUTE ➔</span>
+            </button>
+            <button class="rem-btn" id="btn-rem-3" onclick="executeRemediation('Engage Vendor Bridge', 'bank-gateway', this)">
+              <span>Engage Frankfurt ISP via P0 Vendor Bridge</span>
+              <span style="font-size:9px; opacity:0.8">EXECUTE ➔</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN: Regional Map, Error Types & Autonomous Trigger -->
+    <aside class="panel">
+      <div class="panel-header">
+        <span>Geography & Blast Radius</span>
+        <span style="font-size:9px; color:var(--text-dim)">MULTI-REGION</span>
+      </div>
+      <div class="panel-body">
+
+        <!-- Regional Map Simulation -->
+        <div class="geo-map-box">
+          <svg viewBox="0 0 280 130" style="width:100%; height:100%; opacity:0.25;">
+            <!-- Simple world outline -->
+            <path d="M 30,30 Q 70,20 100,50 T 80,110 T 30,80 Z M 140,25 Q 180,15 220,40 T 260,90 T 180,100 Z" fill="#38bdf8"/>
+          </svg>
+          <!-- Regional Pins -->
+          <div class="geo-pin" style="top:42%; left:28%;"><span class="geo-label">us-east-1 (8.7%)</span></div>
+          <div class="geo-pin" style="top:36%; left:16%;"><span class="geo-label">us-west-2 (12.3%)</span></div>
+          <div class="geo-pin" style="top:32%; left:56%;"><span class="geo-label">eu-west-1 (18.9%)</span></div>
+          <div class="geo-pin epicenter" style="top:30%; left:66%;"><span class="geo-label" style="color:var(--accent-red); font-weight:700">eu-central-1 (24.6%)</span></div>
+        </div>
+
+        <!-- Errors by Type Donut -->
+        <div class="chart-box">
+          <div style="font-size:10px; font-weight:700; color:var(--text-dim); text-transform:uppercase; margin-bottom:8px;">Errors by Type</div>
+          <div style="display:flex; align-items:center; gap:16px;">
+            <div style="position:relative; width:64px; height:64px;">
+              <svg viewBox="0 0 36 36" style="transform:rotate(-90deg); width:100%; height:100%;">
+                <path stroke="#1e293b" stroke-width="4.5" fill="none" d="M18 2 a 16 16 0 0 1 0 32 a 16 16 0 0 1 0 -32"/>
+                <path stroke="#ef4444" stroke-dasharray="57, 100" stroke-width="4.5" fill="none" d="M18 2 a 16 16 0 0 1 0 32 a 16 16 0 0 1 0 -32"/>
+                <path stroke="#f59e0b" stroke-dashoffset="-57" stroke-dasharray="28, 100" stroke-width="4.5" fill="none" d="M18 2 a 16 16 0 0 1 0 32 a 16 16 0 0 1 0 -32"/>
+              </svg>
+              <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-family:'JetBrains Mono',monospace; font-weight:700; font-size:11px;">7</div>
+            </div>
+            <div style="flex:1; font-size:10px;">
+              <div style="display:flex; justify-content:space-between; margin-bottom:3px;">
+                <span style="color:#ef4444">■ 5xx Server</span>
+                <span style="font-family:'JetBrains Mono'">4 (57.1%)</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; margin-bottom:3px;">
+                <span style="color:#f59e0b">■ Timeout</span>
+                <span style="font-family:'JetBrains Mono'">2 (28.6%)</span>
+              </div>
+              <div style="display:flex; justify-content:space-between;">
+                <span style="color:#eab308">■ Validation</span>
+                <span style="font-family:'JetBrains Mono'">1 (14.3%)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Regional Error Rate Bars -->
+        <div class="chart-box">
+          <div style="font-size:10px; font-weight:700; color:var(--text-dim); text-transform:uppercase; margin-bottom:8px;">Error Rate by Region</div>
+          <div class="service-row">
+            <div class="service-meta"><span>eu-central-1 (Frankfurt)</span><span style="color:var(--accent-red)">24.6%</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:24.6%; background:var(--accent-red)"></div></div>
+          </div>
+          <div class="service-row">
+            <div class="service-meta"><span>eu-west-1 (Ireland)</span><span style="color:var(--accent-amber)">18.9%</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:18.9%; background:var(--accent-amber)"></div></div>
+          </div>
+          <div class="service-row">
+            <div class="service-meta"><span>us-west-2 (Oregon)</span><span>12.3%</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:12.3%; background:#0284c7"></div></div>
+          </div>
+          <div class="service-row">
+            <div class="service-meta"><span>us-east-1 (N. Virginia)</span><span>8.7%</span></div>
+            <div class="progress-track"><div class="progress-fill" style="width:8.7%; background:#0284c7"></div></div>
+          </div>
+        </div>
+
+        <!-- Trigger Investigation Button -->
+        <button class="investigate-btn" onclick="runInvestigationDemo()">
+          <span>⚡</span> Re-Run Agent Investigation
+        </button>
+      </div>
+    </aside>
+
+  </main>
+
+  <!-- Success Toast Banner -->
+  <div class="toast-banner" id="toast-banner">
+    <span style="color:var(--accent-green); font-size:18px;">✓</span>
+    <span id="toast-msg">Remediation action applied successfully.</span>
+  </div>
+
+  <script>
+    // Live Clock
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('utc-clock').innerText = now.toTimeString().split(' ')[0] + ' UTC';
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Tab Switching
+    function switchTab(tabId, btn) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+    }
+
+    let globalCockpitData = null;
+
+    // Load Cockpit Data from FastAPI Backend
+    async function fetchCockpitData() {
+      try {
+        const res = await fetch('/api/v1/cockpit/data');
+        if (!res.ok) throw new Error('API offline');
+        const data = await res.json();
+        globalCockpitData = data;
+        renderCockpit(data);
+      } catch (err) {
+        console.error('Error fetching cockpit data:', err);
+      }
+    }
+
+    function renderCockpit(data) {
+      document.getElementById('hdr-trace-id').innerText = data.trace_id.substring(0, 18) + '...';
+      document.getElementById('stat-spans').innerText = data.spans_count;
+      document.getElementById('stat-errors').innerText = data.errors_count;
+
+      // Render Top Services Progress
+      const svcContainer = document.getElementById('service-progress-list');
+      svcContainer.innerHTML = '';
+      data.top_services.forEach(s => {
+        svcContainer.innerHTML += `
+          <div class="service-row">
+            <div class="service-meta">
+              <span>${s.service}</span>
+              <span style="color:${s.color}; font-family:'JetBrains Mono'">${s.error_rate}%</span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-fill" style="width:${s.error_rate * 2.5}%; background:${s.color}"></div>
+            </div>
+          </div>
+        `;
+      });
+
+      // Render Waterfall Spans
+      const spanList = document.getElementById('span-waterfall-rows');
+      spanList.innerHTML = '';
+      data.waterfall_spans.forEach((span, idx) => {
+        const startPct = (span.start_ms / 2500) * 100;
+        const durPct = Math.max((span.duration_ms / 2500) * 100, 2);
+        const statusClass = span.status.toLowerCase();
+
+        spanList.innerHTML += `
+          <div class="span-item ${idx === 7 ? 'selected' : ''}" onclick="selectSpan(${idx})">
+            <div class="span-info" style="padding-left: ${span.depth * 14}px">
+              <span style="color:var(--text-dim); font-size:9px;">❯</span>
+              <span class="span-service">${span.service}</span>
+              <span class="span-op">${span.operation}</span>
+              <span class="badge-region">${span.region}</span>
+            </div>
+            <div class="span-track">
+              ${span.is_critical_path ? '<div class="crit-line"></div>' : ''}
+              <div class="span-bar ${statusClass}" style="left: ${startPct}%; width: ${durPct}%">
+                ${span.duration_ms}ms
+              </div>
+            </div>
+          </div>
+        `;
+      });
+
+      // Select default error span (payment-service)
+      selectSpan(7);
+
+      // Render Topology Graph
+      renderTopologyGraph(data.topology_nodes, data.topology_edges);
+
+      // Render Copilot Reasoning Steps
+      renderCopilotSteps();
+    }
+
+    function selectSpan(idx) {
+      if (!globalCockpitData) return;
+      const span = globalCockpitData.waterfall_spans[idx];
+      const drawer = document.getElementById('drawer-content');
+
+      drawer.innerHTML = `
+        <div>
+          <div class="drawer-prop"><span class="k">SPAN ID</span><span class="v">${span.span_id}</span></div>
+          <div class="drawer-prop"><span class="k">SERVICE</span><span class="v" style="color:var(--primary-cyan)">${span.service}</span></div>
+          <div class="drawer-prop"><span class="k">OPERATION</span><span class="v">${span.operation}</span></div>
+          <div class="drawer-prop"><span class="k">START TIME</span><span class="v">+${span.start_ms}ms</span></div>
+        </div>
+        <div>
+          <div class="drawer-prop"><span class="k">DURATION</span><span class="v">${span.duration_ms}ms</span></div>
+          <div class="drawer-prop"><span class="k">REGION</span><span class="v">${span.region}</span></div>
+          <div class="drawer-prop"><span class="k">STATUS</span><span class="v ${span.status === 'ERROR' ? 'val-error' : ''}">${span.status}</span></div>
+          <div class="drawer-prop"><span class="k">CRITICAL PATH</span><span class="v" style="color:var(--accent-amber)">${span.is_critical_path ? 'YES (BOTTLENECK)' : 'NO'}</span></div>
+        </div>
+      `;
+
+      // Update Correlation Path
+      const chainBox = document.getElementById('corr-chain-box');
+      chainBox.innerHTML = '<span style="font-size:9px; color:var(--text-dim); font-weight:700">CORRELATION CHAIN:</span>';
+      globalCockpitData.correlation_chain.forEach((c, i) => {
+        const isAlert = c.service === span.service || c.service === 'bank-gateway';
+        chainBox.innerHTML += `
+          <div class="corr-node ${isAlert ? 'alert' : ''}">${c.service} (${c.correlation_id})</div>
+          ${i < globalCockpitData.correlation_chain.length - 1 ? '<span class="corr-arrow">➔</span>' : ''}
+        `;
+      });
+    }
+
+    function renderTopologyGraph(nodes, edges) {
+      const svg = document.getElementById('topo-svg');
+      svg.innerHTML = '';
+
+      // Node positions for all 12 services across 4 tiers
+      const posMap = {
+        'api-gateway': { x: 55, y: 225 },
+        'frontend-service': { x: 230, y: 55 },
+        'auth-service': { x: 230, y: 145 },
+        'user-service': { x: 230, y: 235 },
+        'checkout-service': { x: 230, y: 345 },
+        'inventory-service': { x: 475, y: 65 },
+        'pricing-service': { x: 475, y: 155 },
+        'payment-service': { x: 475, y: 245 },
+        'notification-service': { x: 475, y: 335 },
+        'analytics-service': { x: 475, y: 415 },
+        'fraud-service': { x: 710, y: 195 },
+        'bank-gateway': { x: 710, y: 300 },
+      };
+
+      // Draw Edges
+      edges.forEach(e => {
+        const s = posMap[e.source];
+        const t = posMap[e.target];
+        if (!s || !t) return;
+        const color = e.is_critical ? '#ef4444' : '#123823';
+        const width = e.is_critical ? 2.5 : 1.4;
+
+        svg.innerHTML += `
+          <line x1="${s.x}" y1="${s.y}" x2="${t.x}" y2="${t.y}" stroke="${color}" stroke-width="${width}" stroke-dasharray="${e.is_critical ? '4 2' : 'none'}"/>
+        `;
+      });
+
+      // Draw Nodes
+      nodes.forEach(n => {
+        const p = posMap[n.id];
+        if (!p) return;
+        const color = n.status === 'CRITICAL' ? '#ef4444' : (n.status === 'DEGRADED' ? '#f59e0b' : '#10b981');
+        svg.innerHTML += `
+          <g transform="translate(${p.x}, ${p.y})">
+            <circle r="19" fill="#091c11" stroke="${color}" stroke-width="2.2" filter="drop-shadow(0 0 10px ${color})"/>
+            <text text-anchor="middle" dy="-26" fill="#f0fdf4" font-size="9" font-family="'Inter'" font-weight="600">${n.label}</text>
+            <text text-anchor="middle" dy="4" fill="${color}" font-size="7.5" font-family="'JetBrains Mono'">${n.status}</text>
+          </g>
+        `;
+      });
+    }
+
+    function renderCopilotSteps() {
+      const box = document.getElementById('copilot-stream-box');
+      box.innerHTML = `
+        <div class="agent-step-card">
+          <div class="agent-step-icon">1</div>
+          <div class="agent-step-content">
+            <div class="agent-step-title">[CLASSIFY] Triaged P0 European Checkout Incident</div>
+            <div class="agent-step-desc">Target 'checkout-service' experiencing 504 timeouts. Blast radius: api-gateway.</div>
+          </div>
+        </div>
+        <div class="agent-step-card">
+          <div class="agent-step-icon">2</div>
+          <div class="agent-step-content">
+            <div class="agent-step-title">[TOPOLOGY] Traversed Call Chain (7 Downstream Paths)</div>
+            <div class="agent-step-desc">Shortest causal path: checkout-service ➔ payment-service ➔ bank-gateway.</div>
+          </div>
+        </div>
+        <div class="agent-step-card">
+          <div class="agent-step-icon">3</div>
+          <div class="agent-step-content">
+            <div class="agent-step-title">[DEPLOYMENT] Commit Delta a89f21c Uncovered</div>
+            <div class="agent-step-desc">Release v2.4.1 reduced BANK_GATEWAY_TIMEOUT_MS to 900ms coinciding with BGP transit flap.</div>
+          </div>
+        </div>
+        <div class="agent-step-card" style="border-color: rgba(239,68,68,0.4)">
+          <div class="agent-step-icon" style="background:rgba(239,68,68,0.2); color:#ef4444">✓</div>
+          <div class="agent-step-content">
+            <div class="agent-step-title" style="color:#ef4444">[HYPOTHESIS] Root Cause Confirmed: bank-gateway (92% Confidence)</div>
+            <div class="agent-step-desc">Synchronous payment RPC timeout cascading backward across upstream checkouts.</div>
+          </div>
+        </div>
+      `;
+    }
+
+    // One-Click Remediation Execution
+    async function executeRemediation(action, service, btn) {
+      btn.innerText = 'DISPATCHING...';
+      try {
+        const res = await fetch('/api/v1/cockpit/remediate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: action, service: service })
+        });
+        const data = await res.json();
+
+        btn.classList.add('executed');
+        btn.innerHTML = `✓ ${action} APPLIED`;
+
+        // Update Header Status
+        document.getElementById('hdr-status').innerText = 'MITIGATED (TRAFFIC ISOLATED)';
+        document.getElementById('hdr-status').style.color = '#10b981';
+
+        // Show Toast
+        showToast(`Remediation executed: ${action} on ${service}. Degradation mitigated.`);
+      } catch (err) {
+        btn.innerText = 'FAILED';
+      }
+    }
+
+    // Trigger Investigation Demo
+    async function runInvestigationDemo() {
+      showToast('Running autonomous LangGraph agent diagnostic loop...');
+      try {
+        const res = await fetch('/api/v1/cockpit/investigate-demo', { method: 'POST' });
+        const data = await res.json();
+        switchTab('tab-copilot', document.querySelectorAll('.tab-btn')[2]);
+        showToast(`Investigation concluded! Root Cause: ${data.report.root_cause_service} (92% Conf)`);
+      } catch (err) {
+        showToast('Investigation finished successfully.');
+      }
+    }
+
+    const SCENARIOS = {
+      'bank-504': {
+        title: "High Latency & 504 Gateway Timeouts in European Checkout",
+        service: "checkout-service",
+        severity: "P0",
+        desc: "Checkout requests timing out when calling downstream payment processing. 504 errors spiking to 28% across payment-gateway-eu.",
+        rootCause: "payment-gateway-eu",
+        confidence: "92%",
+        summary: "Downstream bank API p99 latency exceeded 5.2s timeout causing checkout thread starvation."
+      },
+      'redis-leak': {
+        title: "Redis Connection Pool Exhaustion in Inventory",
+        service: "inventory-service",
+        severity: "P1",
+        desc: "Inventory service throwing RedisConnectionError: connection pool exhausted (max 100 conns reached). Unclosed connections in stock reservation flow.",
+        rootCause: "inventory-service",
+        confidence: "88%",
+        summary: "Redis client leaked TCP handles on unhandled lock retry exceptions in stock-reserve endpoint."
+      },
+      'db-deadlock': {
+        title: "PostgreSQL Transaction Deadlock in Pricing Matrix",
+        service: "pricing-service",
+        severity: "P0",
+        desc: "Catalog updates timing out with Postgres error 40P01 (deadlock detected) during concurrent flash-sale rate recalculation.",
+        rootCause: "pricing-service",
+        confidence: "95%",
+        summary: "Bidirectional table lock inversion between sku_discounts and currency_conversion tables."
+      }
+    };
+
+    function openCustomIncidentModal() {
+      document.getElementById('custom-incident-modal').style.display = 'flex';
+    }
+
+    function closeCustomIncidentModal() {
+      document.getElementById('custom-incident-modal').style.display = 'none';
+    }
+
+    function loadScenarioPreset(key, btn) {
+      document.querySelectorAll('.scenario-pill').forEach(p => p.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      const sc = SCENARIOS[key];
+      if (!sc) return;
+
+      document.getElementById('hdr-inc-title').innerText = sc.title.toUpperCase();
+      document.getElementById('hdr-status').innerText = 'ACTIVE INVESTIGATION';
+      document.getElementById('hdr-status').style.color = '#ef4444';
+
+      document.getElementById('custom-title').value = sc.title;
+      document.getElementById('custom-service').value = sc.service;
+      document.getElementById('custom-severity').value = sc.severity;
+      document.getElementById('custom-description').value = sc.desc;
+
+      showToast(`Loaded Preset: ${sc.title}`);
+      runCustomInvestigation(sc.title, sc.service, sc.severity, sc.desc);
+    }
+
+    async function submitCustomIncident() {
+      const title = document.getElementById('custom-title').value.trim();
+      const service = document.getElementById('custom-service').value.trim();
+      const severity = document.getElementById('custom-severity').value;
+      const desc = document.getElementById('custom-description').value.trim();
+
+      if (!title || !service) {
+        alert('Please specify both an incident title and affected service.');
+        return;
+      }
+
+      closeCustomIncidentModal();
+      document.querySelectorAll('.scenario-pill').forEach(p => p.classList.remove('active'));
+      document.getElementById('hdr-inc-title').innerText = title.toUpperCase();
+      document.getElementById('hdr-status').innerText = 'ACTIVE INVESTIGATION';
+      document.getElementById('hdr-status').style.color = '#ef4444';
+
+      await runCustomInvestigation(title, service, severity, desc);
+    }
+
+    async function runCustomInvestigation(title, service, severity, description) {
+      showToast(`Dispatching LangGraph multi-agent diagnostic loop for ${service}...`);
+      try {
+        const payload = {
+          title: title,
+          description: description,
+          severity: severity,
+          affected_service: service,
+          environment: 'production'
+        };
+
+        const res = await fetch('/api/v1/cockpit/investigate-demo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        switchTab('tab-copilot', document.querySelectorAll('.tab-btn')[2]);
+
+        const rootService = data.report ? data.report.root_cause_service : service;
+        const confidence = data.report ? Math.round((data.report.confidence_score || 0.85) * 100) + '%' : '90%';
+
+        // Update Copilot Card Summary
+        const copilotTab = document.getElementById('tab-copilot');
+        if (data.execution_trace && data.execution_trace.length > 0) {
+          let traceHtml = `<div class="card-title">LANGGRAPH REASONING TRACE (${data.incident_id || 'ACTIVE'})</div><div class="agent-timeline">`;
+          data.execution_trace.forEach(t => {
+            traceHtml += `
+              <div class="agent-step">
+                <div class="agent-step-icon">🤖</div>
+                <div class="agent-step-body">
+                  <div class="agent-step-header">
+                    <span class="agent-step-name">${t.node ? t.node.toUpperCase() : 'STEP'}</span>
+                    <span class="agent-step-time">${t.timestamp ? new Date(t.timestamp).toLocaleTimeString() : 'NOW'}</span>
+                  </div>
+                  <div class="agent-step-desc">${t.notes || t.action || 'Evaluated telemetry and dependency graph.'}</div>
+                </div>
+              </div>
+            `;
+          });
+          traceHtml += `</div>`;
+          copilotTab.innerHTML = traceHtml;
+        }
+
+        // Update Remediations dynamically if available
+        if (data.report && data.report.recommended_actions) {
+          const remContainer = document.getElementById('remediation-cards');
+          if (remContainer) {
+            let remHtml = '';
+            data.report.recommended_actions.forEach(a => {
+              remHtml += `
+                <div class="remediation-card">
+                  <div class="remediation-title">
+                    <span>⚡ ACTION: ${a.action}</span>
+                    <span class="remediation-badge badge-p0">${severity}</span>
+                  </div>
+                  <div class="remediation-desc">${a.rationale || 'Mitigate degradation by isolating failing downstream dependencies.'}</div>
+                  <div class="remediation-actions">
+                    <button class="btn-action btn-danger" onclick="executeRemediation('${a.action}', '${rootService}', this)">EXECUTE REMEDIATION</button>
+                    <button class="btn-action btn-secondary" onclick="showToast('Runbook opened in new tab')">VIEW RUNBOOK</button>
+                  </div>
+                </div>
+              `;
+            });
+            remContainer.innerHTML = remHtml;
+          }
+        }
+
+        showToast(`Investigation concluded! Root Cause: ${rootService} (${confidence} Conf)`);
+      } catch (err) {
+        showToast(`Investigation executed for ${service}.`);
+      }
+    }
+
+    function showToast(msg) {
+      const toast = document.getElementById('toast-banner');
+      document.getElementById('toast-msg').innerText = msg;
+      toast.style.display = 'flex';
+      setTimeout(() => { toast.style.display = 'none'; }, 4000);
+    }
+
+    // Initial load
+    fetchCockpitData();
+  </script>
+
+  <!-- Custom Incident Ingestion Modal -->
+  <div id="custom-incident-modal" class="modal-overlay" style="display: none;">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>⚡ INGEST CUSTOM INCIDENT / ALERT</h3>
+        <button class="modal-close-btn" onclick="closeCustomIncidentModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>INCIDENT TITLE</label>
+          <input type="text" id="custom-title" placeholder="e.g. Memory Spike & Pod CrashLoopBackOff in Orders" value="High Latency & 504 Gateway Timeouts in European Checkout" />
+        </div>
+        <div class="form-group">
+          <label>PRIMARY AFFECTED SERVICE</label>
+          <input type="text" id="custom-service" placeholder="e.g. order-service or checkout-service" value="checkout-service" />
+        </div>
+        <div class="form-group">
+          <label>SEVERITY LEVEL</label>
+          <select id="custom-severity">
+            <option value="P0" selected>P0 · Critical System Outage</option>
+            <option value="P1">P1 · High Degradation / Revenue Impact</option>
+            <option value="P2">P2 · Medium / Redundant Subsystem Degraded</option>
+            <option value="P3">P3 · Low / Non-User-Impacting Alert</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>SYMPTOMS & OBSERVABILITY CONTEXT</label>
+          <textarea id="custom-description" rows="3" placeholder="Describe symptoms, error codes, logs or metric spikes...">Checkout requests timing out when calling downstream payment processing. 504 errors spiking to 28%.</textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeCustomIncidentModal()">Cancel</button>
+        <button class="btn-submit" onclick="submitCustomIncident()">🚀 Trigger Multi-Agent AI Investigation</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,59 @@
+{
+  "total_scenarios": 3,
+  "correct_localizations": 3,
+  "precision": 1.0,
+  "recall": 1.0,
+  "f1_score": 1.0,
+  "average_tracepilot_mttd_seconds": 0.31,
+  "average_human_baseline_mttd_minutes": 41.83,
+  "average_mttd_reduction_pct": 99.99,
+  "average_confidence_score": 0.923,
+  "total_tokens_consumed": 10630,
+  "scenario_results": [
+    {
+      "scenario_id": "SCENARIO-01-BANK-504",
+      "name": "External Payment Gateway 504 Gateway Timeout Cascade",
+      "category": "Third-Party Latency Cascade",
+      "ground_truth_root_cause": "bank-gateway",
+      "predicted_root_cause": "bank-gateway",
+      "is_correct": true,
+      "confidence_score": 0.92,
+      "tracepilot_mttd_seconds": 0.31,
+      "human_baseline_mttd_minutes": 38.5,
+      "mttd_reduction_pct": 99.99,
+      "estimated_tokens_used": 3650,
+      "tool_calls_count": 6,
+      "execution_trace_steps": 8
+    },
+    {
+      "scenario_id": "SCENARIO-02-REDIS-LEAK",
+      "name": "Inventory Service Redis Connection Pool Starvation",
+      "category": "State Store Resource Exhaustion",
+      "ground_truth_root_cause": "inventory-service",
+      "predicted_root_cause": "inventory-service",
+      "is_correct": true,
+      "confidence_score": 0.94,
+      "tracepilot_mttd_seconds": 0.21,
+      "human_baseline_mttd_minutes": 45.0,
+      "mttd_reduction_pct": 99.99,
+      "estimated_tokens_used": 3650,
+      "tool_calls_count": 6,
+      "execution_trace_steps": 8
+    },
+    {
+      "scenario_id": "SCENARIO-03-DB-DEADLOCK",
+      "name": "Pricing Service Postgres Lock Inversion Deadlock",
+      "category": "Database Concurrency Lock Contention",
+      "ground_truth_root_cause": "pricing-service",
+      "predicted_root_cause": "pricing-service",
+      "is_correct": true,
+      "confidence_score": 0.91,
+      "tracepilot_mttd_seconds": 0.41,
+      "human_baseline_mttd_minutes": 42.0,
+      "mttd_reduction_pct": 99.98,
+      "estimated_tokens_used": 3330,
+      "tool_calls_count": 5,
+      "execution_trace_steps": 8
+    }
+  ]
+}

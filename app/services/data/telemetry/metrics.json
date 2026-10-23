@@ -1,0 +1,37 @@
+{
+  "timestamp": "2025-05-23T14:32:18.104Z",
+  "time_window_minutes": 15,
+  "summary": {
+    "overall_error_rate_pct": 15.9,
+    "error_rate_delta_pct": 8.7,
+    "p95_latency_ms": 2800,
+    "p95_latency_delta_pct": 18.4,
+    "throughput_rps": 1820,
+    "throughput_delta_pct": 12.7
+  },
+  "top_services_by_error_rate": [
+    {"service": "checkout-service", "error_rate_pct": 32.1, "p95_latency_ms": 1820},
+    {"service": "payment-service", "error_rate_pct": 28.7, "p95_latency_ms": 2100},
+    {"service": "inventory-service", "error_rate_pct": 12.4, "p95_latency_ms": 270},
+    {"service": "pricing-service", "error_rate_pct": 7.8, "p95_latency_ms": 220},
+    {"service": "user-service", "error_rate_pct": 3.1, "p95_latency_ms": 100}
+  ],
+  "error_rate_by_region": [
+    {"region": "eu-central-1", "error_rate_pct": 24.6, "primary_culprit": "bank-gateway"},
+    {"region": "eu-west-1", "error_rate_pct": 18.9, "primary_culprit": "payment-service"},
+    {"region": "us-west-2", "error_rate_pct": 12.3, "primary_culprit": "inventory-service"},
+    {"region": "us-east-1", "error_rate_pct": 8.7, "primary_culprit": "checkout-service"}
+  ],
+  "errors_by_type": [
+    {"type": "5xx Server Error", "count": 4, "percentage": 57.1},
+    {"type": "Timeout", "count": 2, "percentage": 28.6},
+    {"type": "Validation Error", "count": 1, "percentage": 14.3}
+  ],
+  "timeline_points": [
+    {"time": "14:17", "error_rate_pct": 1.2, "p95_latency_ms": 380, "throughput_rps": 1550},
+    {"time": "14:21", "error_rate_pct": 1.5, "p95_latency_ms": 410, "throughput_rps": 1600},
+    {"time": "14:25", "error_rate_pct": 3.8, "p95_latency_ms": 780, "throughput_rps": 1680},
+    {"time": "14:29", "error_rate_pct": 9.4, "p95_latency_ms": 1650, "throughput_rps": 1740},
+    {"time": "14:32", "error_rate_pct": 15.9, "p95_latency_ms": 2800, "throughput_rps": 1820}
+  ]
+}

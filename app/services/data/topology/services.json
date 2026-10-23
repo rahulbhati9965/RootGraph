@@ -1,0 +1,140 @@
+{
+  "topology_version": "1.0",
+  "environment": "production",
+  "services": [
+    {
+      "id": "svc_api_gateway",
+      "name": "api-gateway",
+      "region": "us-east-1",
+      "tier": "tier-0",
+      "team": "traffic-edge",
+      "protocol": "http",
+      "health_status": "healthy",
+      "dependencies": ["auth-service", "user-service", "frontend-service", "checkout-service"]
+    },
+    {
+      "id": "svc_auth",
+      "name": "auth-service",
+      "region": "us-east-1",
+      "tier": "tier-1",
+      "team": "identity",
+      "protocol": "grpc",
+      "health_status": "healthy",
+      "dependencies": []
+    },
+    {
+      "id": "svc_user",
+      "name": "user-service",
+      "region": "us-east-1",
+      "tier": "tier-1",
+      "team": "core-services",
+      "protocol": "grpc",
+      "health_status": "healthy",
+      "dependencies": []
+    },
+    {
+      "id": "svc_frontend",
+      "name": "frontend-service",
+      "region": "us-east-1",
+      "tier": "tier-1",
+      "team": "web-experience",
+      "protocol": "http",
+      "health_status": "healthy",
+      "dependencies": []
+    },
+    {
+      "id": "svc_checkout",
+      "name": "checkout-service",
+      "region": "us-east-1",
+      "tier": "tier-0",
+      "team": "checkout-growth",
+      "protocol": "grpc",
+      "health_status": "degraded",
+      "dependencies": ["inventory-service", "pricing-service", "payment-service", "notification-service", "analytics-service"]
+    },
+    {
+      "id": "svc_inventory",
+      "name": "inventory-service",
+      "region": "us-west-2",
+      "tier": "tier-1",
+      "team": "supply-chain",
+      "protocol": "grpc",
+      "health_status": "healthy",
+      "dependencies": []
+    },
+    {
+      "id": "svc_pricing",
+      "name": "pricing-service",
+      "region": "us-west-2",
+      "tier": "tier-1",
+      "team": "finance-engine",
+      "protocol": "grpc",
+      "health_status": "healthy",
+      "dependencies": []
+    },
+    {
+      "id": "svc_payment",
+      "name": "payment-service",
+      "region": "eu-west-1",
+      "tier": "tier-0",
+      "team": "payments-core",
+      "protocol": "http",
+      "health_status": "critical",
+      "dependencies": ["fraud-service", "bank-gateway"]
+    },
+    {
+      "id": "svc_fraud",
+      "name": "fraud-service",
+      "region": "eu-west-1",
+      "tier": "tier-1",
+      "team": "risk-compliance",
+      "protocol": "grpc",
+      "health_status": "healthy",
+      "dependencies": []
+    },
+    {
+      "id": "svc_bank_gateway",
+      "name": "bank-gateway",
+      "region": "eu-central-1",
+      "tier": "tier-0",
+      "team": "external-partner",
+      "protocol": "http",
+      "is_external": true,
+      "health_status": "outage",
+      "dependencies": []
+    },
+    {
+      "id": "svc_notification",
+      "name": "notification-service",
+      "region": "us-east-1",
+      "tier": "tier-2",
+      "team": "customer-comms",
+      "protocol": "grpc",
+      "health_status": "healthy",
+      "dependencies": []
+    },
+    {
+      "id": "svc_analytics",
+      "name": "analytics-service",
+      "region": "us-east-1",
+      "tier": "tier-2",
+      "team": "data-platform",
+      "protocol": "kafka",
+      "health_status": "healthy",
+      "dependencies": []
+    }
+  ],
+  "dependency_edges": [
+    {"source": "api-gateway", "target": "auth-service", "type": "SYNC_CALL", "timeout_ms": 500},
+    {"source": "api-gateway", "target": "user-service", "type": "SYNC_CALL", "timeout_ms": 500},
+    {"source": "api-gateway", "target": "frontend-service", "type": "SYNC_CALL", "timeout_ms": 500},
+    {"source": "api-gateway", "target": "checkout-service", "type": "SYNC_CALL", "timeout_ms": 3000},
+    {"source": "checkout-service", "target": "inventory-service", "type": "SYNC_CALL", "timeout_ms": 1000},
+    {"source": "checkout-service", "target": "pricing-service", "type": "SYNC_CALL", "timeout_ms": 800},
+    {"source": "checkout-service", "target": "payment-service", "type": "SYNC_CALL", "timeout_ms": 2500},
+    {"source": "checkout-service", "target": "notification-service", "type": "ASYNC_FIRE_AND_FORGET", "timeout_ms": 500},
+    {"source": "checkout-service", "target": "analytics-service", "type": "ASYNC_FIRE_AND_FORGET", "timeout_ms": 500},
+    {"source": "payment-service", "target": "fraud-service", "type": "SYNC_CALL", "timeout_ms": 800},
+    {"source": "payment-service", "target": "bank-gateway", "type": "SYNC_CALL", "timeout_ms": 2000, "circuit_breaker_enabled": true}
+  ]
+}
