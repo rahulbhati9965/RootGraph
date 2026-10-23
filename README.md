@@ -1,7 +1,4 @@
 
-# RootGraph 🛰️
-> **Autonomous AI-Powered Distributed Systems Incident Intelligence Platform**
-=======
 # RootGraph 🚀
 > **AI-Powered Distributed Systems Incident Intelligence Platform**
 
