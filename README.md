@@ -1,5 +1,10 @@
+<<<<<<< HEAD
 # RootGraph 🛰️
 > **Autonomous AI-Powered Distributed Systems Incident Intelligence Platform**
+=======
+# RootGraph 🚀
+> **AI-Powered Distributed Systems Incident Intelligence Platform**
+>>>>>>> 40be03516ea1c80e72cfff7550a1ca5adbe4cd87
 
 [![Python Version](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)](https://fastapi.tiangolo.com)
