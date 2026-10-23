@@ -1,4 +1,4 @@
-# TracePilot 🚀
+# RootGraph 🚀
 > **AI-Powered Distributed Systems Incident Intelligence Platform**
 
 TracePilot is an agentic incident copilot that diagnoses cascading failures in distributed microservice architectures. By combining **GraphRAG**, **LangGraph**, the **Model Context Protocol (MCP)**, and distributed systems engineering patterns, TracePilot autonomously correlates logs, metrics, traces, and service topologies to pinpoint root causes without hallucinations.
