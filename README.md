@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # RootGraph 🛰️
 > **Autonomous AI-Powered Distributed Systems Incident Intelligence Platform**
 =======
