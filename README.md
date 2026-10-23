@@ -12,8 +12,6 @@
 [![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-W3C_TraceContext-4A154B?style=for-the-badge&logo=opentelemetry)](https://opentelemetry.io)
 [![Redis](https://img.shields.io/badge/Redis_Streams-Consumer_Groups-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io)
 [![Neo4j](https://img.shields.io/badge/Neo4j-GraphRAG-008CC1?style=for-the-badge&logo=neo4j&logoColor=white)](https://neo4j.com)
-[![Tests Passing](https://img.shields.io/badge/Tests-45%2F45%20Passing-00ff88?style=for-the-badge)](https://github.com/rahulbhati9965/RootGraph)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 ---
 
